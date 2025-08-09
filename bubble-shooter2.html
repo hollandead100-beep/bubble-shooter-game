@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bubble Shooter Game</title>
+<style>
+  body {
+    margin: 0;
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas {
+    background: #333;
+    border: 2px solid #fff;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="480" height="640"></canvas>
+
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const bubbleSize = 20;
+  let bubbles = [];
+  let shooter = { x: canvas.width / 2, y: canvas.height - 30, angle: 0 };
+  let currentBubble = createBubble(shooter.x, shooter.y, randomColor());
+  let isShooting = false;
+  let dx = 0, dy = 0;
+
+  function createBubble(x, y, color) {
+    return { x, y, color };
+  }
+
+  function randomColor() {
+    const colors = ["red", "green", "blue", "yellow", "purple", "cyan"];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  // Initialize bubbles grid
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 10; col++) {
+      bubbles.push(createBubble(col * bubbleSize * 2 + bubbleSize, row * bubbleSize * 2 + bubbleSize, randomColor()));
+    }
+  }
+
+  // Mouse move to aim
+  canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    shooter.angle = Math.atan2(mouseY - shooter.y, mouseX - shooter.x);
+  });
+
+  // Click to shoot
+  canvas.addEventListener("click", () => {
+    if (!isShooting) {
+      dx = Math.cos(shooter.angle) * 5;
+      dy = Math.sin(shooter.angle) * 5;
+      isShooting = true;
+    }
+  });
+
+  function drawBubble(b) {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, bubbleSize, 0, Math.PI * 2);
+    ctx.fillStyle = b.color;
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.stroke();
+  }
+
+  function drawShooter() {
+    ctx.beginPath();
+    ctx.moveTo(shooter.x, shooter.y);
+    ctx.lineTo(shooter.x + Math.cos(shooter.angle) * 30, shooter.y + Math.sin(shooter.angle) * 30);
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    drawBubble(currentBubble);
+  }
+
+  function detectCollision(b1, b2) {
+    const dist = Math.hypot(b1.x - b2.x, b1.y - b2.y);
+    return dist < bubbleSize * 2;
+  }
+
+  function stopBubble() {
+    bubbles.push(currentBubble);
+    currentBubble = createBubble(shooter.x, shooter.y, randomColor());
+    isShooting = false;
+  }
+
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    bubbles.forEach(drawBubble);
+    drawShooter();
+
+    if (isShooting) {
+      currentBubble.x += dx;
+      currentBubble.y += dy;
+
+      // Bounce on side walls
+      if (currentBubble.x <= bubbleSize || currentBubble.x >= canvas.width - bubbleSize) {
+        dx = -dx;
+      }
+
+      // Stop at top
+      if (currentBubble.y <= bubbleSize) {
+        stopBubble();
+      }
+
+      // Stop on collision
+      for (let b of bubbles) {
+        if (detectCollision(currentBubble, b)) {
+          stopBubble();
+          break;
+        }
+      }
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+</script>
+
+</body>
+</html>
